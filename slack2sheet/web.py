@@ -46,7 +46,14 @@ def create_app(cred_path, sheet_url):
             'action_name': payload['actions'][0]['name'],
             'action_value': payload['actions'][0]['value'],
         }
-        worksheet.append_row([data.get(_) for _ in active_fields])
+        try:
+            worksheet.append_row([data.get(_) for _ in active_fields])
+        except:  # unauthorized
+            global worksheet, sheet, gc
+            gc = gspread.authorize(credentials)
+            sheet = gc.open_by_url(sheet_url)
+            worksheet = sheet.sheet1
+            worksheet.append_row([data.get(_) for _ in active_fields])
         # print(payload.keys())
         original_message['attachments'].append({
             'text': "{} answered '{}'".format(data['user'], data['action_value']),

@@ -6,4 +6,4 @@ ADD . /slack2sheet
 WORKDIR /slack2sheet
 RUN python setup.py install
 EXPOSE 8080
-CMD python -m slack2sheet
+CMD python -m slack2sheet /google/credentials.json $SHEET_URL
