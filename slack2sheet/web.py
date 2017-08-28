@@ -15,15 +15,18 @@ def get_row_count(worksheet):
     return len(list(filter(None, col_values)))
 
 
+def refresh_worksheet(credentials, sheet_url):
+    gc = gspread.authorize(credentials)
+    sheet = gc.open_by_url(sheet_url)
+    return sheet.sheet1
+
 active_fields = ['message_ts', 'channel', 'user', 'action_id', 'action_name', 'action_value']
 
 
 def create_app(cred_path, sheet_url):
     app = Flask("slack2sheet")
     credentials = ServiceAccountCredentials.from_json_keyfile_name(cred_path, scope)
-    gc = gspread.authorize(credentials)
-    sheet = gc.open_by_url(sheet_url)
-    worksheet = sheet.sheet1
+    worksheet = refresh_worksheet(credentials, sheet_url)
     if get_row_count(worksheet) == 0:
         print('Resizing the empty worksheet to 1x{} and inserting the header'.format(len(active_fields)))
         worksheet.resize(rows=1, cols=len(active_fields))
@@ -46,15 +49,8 @@ def create_app(cred_path, sheet_url):
             'action_name': payload['actions'][0]['name'],
             'action_value': payload['actions'][0]['value'],
         }
-        try:
-            worksheet.append_row([data.get(_) for _ in active_fields])
-        except:  # unauthorized
-            global worksheet, sheet, gc
-            gc = gspread.authorize(credentials)
-            sheet = gc.open_by_url(sheet_url)
-            worksheet = sheet.sheet1
-            worksheet.append_row([data.get(_) for _ in active_fields])
-        # print(payload.keys())
+        refresh_worksheet(credentials, sheet_url).append_row([data.get(_) for _ in active_fields])
+
         original_message['attachments'].append({
             'text': "{} answered '{}'".format(data['user'], data['action_value']),
             'attachment_type': 'default'
